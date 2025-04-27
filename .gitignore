@@ -1,0 +1,14 @@
+# backend files
+backend/venv/
+backend/__pycache__/
+backend/*.db
+backend/config.json
+backend/resume.pdf
+
+# frontend files
+frontend/.next/
+frontend/node_modules/
+
+# ignore
+*.pyc
+*.env
