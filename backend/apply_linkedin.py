@@ -34,13 +34,21 @@ def log_application(job_title, company_name, job_link, status):
     conn.commit()
     conn.close()
 
+def already_applied(job_url):
+    """Check if this job URL already exists in the DB."""
+    conn = sqlite3.connect('job_applications.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM applied_jobs WHERE job_url = ?', (job_url,))
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count > 0
+
 def cleanup_modals(page):
     """Dismiss or discard modals so the bot can move on safely."""
     if page.is_visible('button[aria-label="Dismiss"]'):
         page.click('button[aria-label="Dismiss"]')
         print("Clicked 'Dismiss' on Easy Apply modal.")
         time.sleep(2)
-
     if page.is_visible('button:has-text("Discard")'):
         page.click('button:has-text("Discard")')
         print("Clicked 'Discard' on Save modal.")
@@ -68,12 +76,18 @@ def apply_to_jobs():
 
         job_links = page.query_selector_all('a.job-card-container__link')
         print(f"Found {len(job_links)} jobs.")
-        job_links = job_links[:3]  # limit for safety/testing
+        job_links = job_links[:5]  # limit for safety
+        print(f"Attempting up to {len(job_links)} job(s)...")
 
         for job_link in job_links:
             try:
                 job_link.click()
                 time.sleep(random.uniform(2, 5))
+
+                job_url = page.url
+                if already_applied(job_url):
+                    print("⚠️ Already applied to this job. Skipping.")
+                    continue
 
                 if not page.is_visible('button.jobs-apply-button'):
                     print("No Easy Apply button. Skipping.")
@@ -105,7 +119,6 @@ def apply_to_jobs():
 
                             job_title = page.inner_text('h2.topcard__title') if page.is_visible('h2.topcard__title') else "Unknown Title"
                             company_name = page.inner_text('span.topcard__flavor') if page.is_visible('span.topcard__flavor') else "Unknown Company"
-                            job_url = page.url
                             log_application(job_title, company_name, job_url, "success")
 
                             time.sleep(random.uniform(2, 4))
