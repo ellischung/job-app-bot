@@ -144,6 +144,21 @@ def apply_to_jobs():
                         title = page.inner_text('h2.topcard__title') if page.is_visible('h2.topcard__title') else "Unknown"
                         comp  = page.inner_text('span.topcard__flavor') if page.is_visible('span.topcard__flavor') else "Unknown"
                         log_application(title, comp, url, "success")
+
+                        # --- NEW: close any post-submit modal via its top-right X ---
+                        for sel in [
+                            'button.artdeco-modal__dismiss',
+                            'button[data-test-modal-close-btn]',
+                            'button[aria-label="Dismiss"]',
+                            'button:has-text("Close")',
+                            'button:has-text("Done")'
+                        ]:
+                            if page.is_visible(sel):
+                                page.click(sel)
+                                print(f"Clicked post-submit close: {sel}")
+                                time.sleep(1)
+                                break
+
                         break
 
                     if page.is_visible('button[aria-label="Review your application"]'):
@@ -152,7 +167,8 @@ def apply_to_jobs():
                         time.sleep(random.uniform(2,4))
                         continue
 
-                    if page.is_visible('button[aria-label="Continue to next step"]') or page.is_visible('button:has-text("Next")'):
+                    if ( page.is_visible('button[aria-label="Continue to next step"]') or
+                         page.is_visible('button:has-text("Next")') ):
                         page.click('button[aria-label="Continue to next step"], button:has-text("Next")')
                         print("Clicked Next")
                         time.sleep(random.uniform(2,4))
