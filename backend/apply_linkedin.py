@@ -28,7 +28,7 @@ def log_application(title, company, url, status):
         )
     """)
     c.execute("""
-        INSERT INTO applied_jobs (timestamp,platform,job_title,company,job_url,status)
+        INSERT INTO_applied_jobs (timestamp,platform,job_title,company,job_url,status)
         VALUES (?,?,?,?,?,?)
     """, (datetime.now().isoformat(), "LinkedIn", title, company, url, status))
     conn.commit()
@@ -43,72 +43,67 @@ def already_applied(url):
     return count > 0
 
 def cleanup_modals(page):
+    # dismiss any stray modal  
     if page.is_visible('button[aria-label="Dismiss"]'):
-        page.click('button[aria-label="Dismiss"]')
-        time.sleep(1)
+        page.click('button[aria-label="Dismiss"]'); time.sleep(1)
     if page.is_visible('button:has-text("Discard")'):
-        page.click('button:has-text("Discard")')
-        time.sleep(1)
+        page.click('button:has-text("Discard")'); time.sleep(1)
 
 def fill_all_blanks(page):
-    """
-    In the active Easy Apply modal:
-      1) Click the 'Yes' label for any unchecked radio inputs with value="Yes"
-      2) Fill any empty Yes/No selects with "Yes" or numeric selects with EXP_DEF
-      3) Fill any empty text inputs/areas with EXP_DEF
-    """
     dialog = page.query_selector('div[role="dialog"]')
     if not dialog:
         return
 
-    # 1) Radio buttons
-    yes_radios = dialog.query_selector_all('input[type="radio"][value="Yes"]:not(:checked)')
-    for r in yes_radios:
+    # 1) Radios → click the 'Yes' label
+    for r in dialog.query_selector_all('input[type="radio"][value="Yes"]:not(:checked)'):
         rid = r.get_attribute("id")
-        if rid:
-            lbl = dialog.query_selector(f'label[for="{rid}"]')
-            if lbl:
-                lbl.click()
-                print("✔️ Auto-selected radio 'Yes'")
-                time.sleep(0.2)
+        lbl = dialog.query_selector(f'label[for="{rid}"]') if rid else None
+        if lbl:
+            lbl.click()
+            print("✔️ Auto-selected radio 'Yes'")
+            time.sleep(0.2)
 
-    # 2 & 3) Selects and text fields
-    controls = dialog.query_selector_all(
-        'form select, form input:not([type="hidden"]):not([type="file"]):not([type="radio"]), form textarea'
-    )
-    for ctl in controls:
-        if ctl.input_value().strip():
-            continue
-        tag = ctl.evaluate("el => el.tagName")
-        if tag == "SELECT":
-            opts = [o.inner_text().strip().lower() for o in ctl.query_selector_all("option")]
-            if set(opts) == YES_NO:
+    # 2) Selects (catch placeholder "Select an option" as blank)
+    for ctl in dialog.query_selector_all('select'):
+        opts = [o.inner_text().strip().lower() for o in ctl.query_selector_all('option')]
+        current = ctl.input_value().strip().lower()
+        if current in ("", "select an option"):
+            if "yes" in opts and "no" in opts:
                 ctl.select_option(index=opts.index("yes"))
                 print("✔️ Auto-selected dropdown 'Yes'")
+                time.sleep(0.2)
             elif all(opt.isdigit() for opt in opts):
                 ctl.select_option(value=EXP_DEF)
                 print(f"✔️ Auto-selected dropdown '{EXP_DEF}'")
-        else:
+                time.sleep(0.2)
+
+    # 3) Text inputs & textareas
+    for ctl in dialog.query_selector_all(
+        'input:not([type="hidden"]):not([type="file"]):not([type="radio"]), textarea'
+    ):
+        if not ctl.input_value().strip():
             ctl.fill(EXP_DEF)
             print(f"✔️ Auto-filled input '{EXP_DEF}'")
 
 def apply_to_jobs():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=50)
-        context = browser.new_context()
-        page = context.new_page()
+        page = browser.new_context().new_page()
 
-        # Login
+        # — Login —
         page.goto("https://www.linkedin.com/login")
         page.fill('input[name="session_key"]', config["linkedin_email"])
         page.fill('input[name="session_password"]', config["linkedin_password"])
         page.click('button[type="submit"]')
         time.sleep(5)
 
-        # Search
+        # — Search —
         kw  = "+".join(config["linkedin_keywords"])
         loc = config["location"].replace(" ", "%20")
-        page.goto(f"https://www.linkedin.com/jobs/search/?keywords={kw}&location={loc}&f_AL=true")
+        page.goto(
+          f"https://www.linkedin.com/jobs/search/"
+          f"?keywords={kw}&location={loc}&f_AL=true"
+        )
         time.sleep(5)
 
         cards = page.query_selector_all("a.job-card-container__link")
@@ -121,31 +116,32 @@ def apply_to_jobs():
                 cards[i].click()
                 time.sleep(random.uniform(2,5))
                 url = page.url
-                if already_applied(url):
-                    print("⚠️ Already applied—skipping")
-                    continue
-                if not page.is_visible("button.jobs-apply-button"):
-                    print("No Easy Apply—skipping")
-                    continue
 
-                # Open Easy Apply
+                if already_applied(url):
+                    print("⚠️ Already applied—skipping"); continue
+                if not page.is_visible("button.jobs-apply-button"):
+                    print("No Easy Apply—skipping"); continue
+
+                # — Easy Apply —
                 page.click("button.jobs-apply-button")
                 time.sleep(random.uniform(2,5))
                 if page.is_visible('input[name="file"]'):
                     page.set_input_files('input[name="file"]', config["resume_path"])
 
-                # Multi-step form
+                # — Multi‑step form —
                 for _ in range(5):
                     fill_all_blanks(page)
 
                     if page.is_visible('button[aria-label="Submit application"]'):
                         page.click('button[aria-label="Submit application"]')
                         print("✅ Application submitted")
-                        title = page.inner_text('h2.topcard__title') if page.is_visible('h2.topcard__title') else "Unknown"
-                        comp  = page.inner_text('span.topcard__flavor') if page.is_visible('span.topcard__flavor') else "Unknown"
+                        title = (page.inner_text('h2.topcard__title')
+                                 if page.is_visible('h2.topcard__title') else "Unknown")
+                        comp  = (page.inner_text('span.topcard__flavor')
+                                 if page.is_visible('span.topcard__flavor') else "Unknown")
                         log_application(title, comp, url, "success")
 
-                        # --- NEW: close any post-submit modal via its top-right X ---
+                        # close any post‑submit modal
                         for sel in [
                             'button.artdeco-modal__dismiss',
                             'button[data-test-modal-close-btn]',
@@ -155,24 +151,23 @@ def apply_to_jobs():
                         ]:
                             if page.is_visible(sel):
                                 page.click(sel)
-                                print(f"Clicked post-submit close: {sel}")
                                 time.sleep(1)
                                 break
-
                         break
 
                     if page.is_visible('button[aria-label="Review your application"]'):
                         page.click('button[aria-label="Review your application"]')
                         print("Clicked Review")
-                        time.sleep(random.uniform(2,4))
-                        continue
+                        time.sleep(random.uniform(2,4)); continue
 
                     if ( page.is_visible('button[aria-label="Continue to next step"]') or
                          page.is_visible('button:has-text("Next")') ):
-                        page.click('button[aria-label="Continue to next step"], button:has-text("Next")')
+                        page.click(
+                          'button[aria-label="Continue to next step"],'
+                          ' button:has-text("Next")'
+                        )
                         print("Clicked Next")
-                        time.sleep(random.uniform(2,4))
-                        continue
+                        time.sleep(random.uniform(2,4)); continue
 
                     break
 
