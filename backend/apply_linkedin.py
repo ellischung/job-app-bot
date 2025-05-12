@@ -53,6 +53,18 @@ def fill_all_blanks(page):
     dialog = page.query_selector('div[role="dialog"]')
     if not dialog:
         return
+    
+    # Location questions auto-fill my address
+    for block in dialog.query_selector_all("div.fb-dash-form-element"):
+        lbl = block.query_selector("label")
+        q = lbl.inner_text().strip().lower() if lbl else ""
+        if "location" in q:
+            ctl = block.query_selector("input, textarea, select")
+            if ctl:
+                ctl.fill(config["home_address"])
+                print(f"✔️ Filled '{q}' with home address")
+            # skip this block entirely
+            continue
 
     # 1) Radios → click the 'Yes' label
     for r in dialog.query_selector_all('input[type="radio"][value="Yes"]:not(:checked)'):
