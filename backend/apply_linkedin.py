@@ -2,8 +2,7 @@ from playwright.sync_api import sync_playwright
 import json
 import time
 import random
-import sqlite3
-from datetime import datetime
+import db
 
 # Default answers
 EXP_DEF = "3"
@@ -13,47 +12,13 @@ YES_NO = {"yes", "no"}
 with open("config.json") as f:
     config = json.load(f)
 
-def log_application(title, company, url, status):
-    conn = sqlite3.connect("job_applications.db")
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS applied_jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            platform TEXT,
-            job_title TEXT,
-            company TEXT,
-            job_url TEXT,
-            status TEXT
-        )
-    """)
-    c.execute("""
-        INSERT INTO applied_jobs (timestamp,platform,job_title,company,job_url,status)
-        VALUES (?,?,?,?,?,?)
-    """, (
-        datetime.now().isoformat(),
-        "LinkedIn",
-        title,
-        company,
-        url,
-        status
-    ))
-    conn.commit()
-    conn.close()
-
-def already_applied(url):
-    conn = sqlite3.connect("job_applications.db")
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM applied_jobs WHERE job_url = ?", (url,))
-    count = c.fetchone()[0]
-    conn.close()
-    return count > 0
-
 def cleanup_modals(page):
     if page.is_visible('button[aria-label="Dismiss"]'):
-        page.click('button[aria-label="Dismiss"]'); time.sleep(1)
+        page.click('button[aria-label="Dismiss"]')
+        time.sleep(1)
     if page.is_visible('button:has-text("Discard")'):
-        page.click('button:has-text("Discard")'); time.sleep(1)
+        page.click('button:has-text("Discard")')
+        time.sleep(1)
 
 def fill_all_blanks(page):
     dialog = page.query_selector('div[role="dialog"]')
@@ -102,6 +67,9 @@ def fill_all_blanks(page):
             print(f"✔️ Auto‑filled input '{EXP_DEF}'")
 
 def apply_to_jobs():
+    # ensure our table exists
+    db.init_db()
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False, slow_mo=50)
         page = browser.new_context().new_page()
@@ -130,25 +98,22 @@ def apply_to_jobs():
         for i in range(limit):
             try:
                 card = cards[i]
-
-                # — EXTRACT job_title & company_name from the card itself —
-                job_title = card.inner_text().strip()
+                # Extract title & company from the card
+                job_title = card.get_attribute("aria-label") or "Unknown"
                 company_name = card.evaluate("""el => {
-                    const cardRoot = el.closest('div.job-card-container');
-                    if (!cardRoot) return '';
-                    const sub = cardRoot.querySelector('.artdeco-entity-lockup__subtitle span');
+                    const root = el.closest('div.job-card-container');
+                    const sub  = root?.querySelector('.artdeco-entity-lockup__subtitle span');
                     return sub ? sub.innerText.trim() : '';
                 }""") or "Unknown"
 
-                # — Open job detail —
+                # navigate to detail
                 card.click()
                 time.sleep(random.uniform(2,5))
-
                 job_url = page.url
-                if already_applied(job_url):
+
+                if db.already_applied(job_url):
                     print("⚠️ Already applied—skipping")
                     continue
-
                 if not page.is_visible("button.jobs-apply-button"):
                     print("No Easy Apply—skipping")
                     continue
@@ -166,7 +131,7 @@ def apply_to_jobs():
                     if page.is_visible('button[aria-label="Submit application"]'):
                         page.click('button[aria-label="Submit application"]')
                         print("✅ Application submitted")
-                        log_application(job_title, company_name, job_url, "success")
+                        db.log_application(job_title, company_name, job_url, "success")
 
                         # close any post‑submit modal
                         for sel in [
@@ -188,8 +153,8 @@ def apply_to_jobs():
                         time.sleep(random.uniform(2,4))
                         continue
 
-                    if ( page.is_visible('button[aria-label="Continue to next step"]') or
-                         page.is_visible('button:has-text("Next")') ):
+                    if (page.is_visible('button[aria-label="Continue to next step"]') or
+                        page.is_visible('button:has-text("Next")')):
                         page.click(
                           'button[aria-label="Continue to next step"],'
                           ' button:has-text("Next")'
