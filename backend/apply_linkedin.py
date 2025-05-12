@@ -30,7 +30,14 @@ def log_application(title, company, url, status):
     c.execute("""
         INSERT INTO applied_jobs (timestamp,platform,job_title,company,job_url,status)
         VALUES (?,?,?,?,?,?)
-    """, (datetime.now().isoformat(), "LinkedIn", title, company, url, status))
+    """, (
+        datetime.now().isoformat(),
+        "LinkedIn",
+        title,
+        company,
+        url,
+        status
+    ))
     conn.commit()
     conn.close()
 
@@ -43,7 +50,6 @@ def already_applied(url):
     return count > 0
 
 def cleanup_modals(page):
-    # dismiss any stray modal  
     if page.is_visible('button[aria-label="Dismiss"]'):
         page.click('button[aria-label="Dismiss"]'); time.sleep(1)
     if page.is_visible('button:has-text("Discard")'):
@@ -53,8 +59,8 @@ def fill_all_blanks(page):
     dialog = page.query_selector('div[role="dialog"]')
     if not dialog:
         return
-    
-    # Location questions auto-fill my address
+
+    # 1) Location → home_address
     for block in dialog.query_selector_all("div.fb-dash-form-element"):
         lbl = block.query_selector("label")
         q = lbl.inner_text().strip().lower() if lbl else ""
@@ -63,39 +69,37 @@ def fill_all_blanks(page):
             if ctl:
                 ctl.fill(config["home_address"])
                 print(f"✔️ Filled '{q}' with home address")
-            # skip this block entirely
             continue
 
-    # 1) Radios → click the 'Yes' label
+    # 2) Radios
     for r in dialog.query_selector_all('input[type="radio"][value="Yes"]:not(:checked)'):
         rid = r.get_attribute("id")
         lbl = dialog.query_selector(f'label[for="{rid}"]') if rid else None
         if lbl:
             lbl.click()
-            print("✔️ Auto-selected radio 'Yes'")
+            print("✔️ Auto‑selected radio 'Yes'")
             time.sleep(0.2)
 
-    # 2) Selects (catch placeholder "Select an option" as blank)
+    # 3) Selects
     for ctl in dialog.query_selector_all('select'):
         opts = [o.inner_text().strip().lower() for o in ctl.query_selector_all('option')]
-        current = ctl.input_value().strip().lower()
-        if current in ("", "select an option"):
+        curr = ctl.input_value().strip().lower()
+        if curr in ("", "select an option"):
             if "yes" in opts and "no" in opts:
                 ctl.select_option(index=opts.index("yes"))
-                print("✔️ Auto-selected dropdown 'Yes'")
-                time.sleep(0.2)
+                print("✔️ Auto‑selected dropdown 'Yes'")
             elif all(opt.isdigit() for opt in opts):
                 ctl.select_option(value=EXP_DEF)
-                print(f"✔️ Auto-selected dropdown '{EXP_DEF}'")
-                time.sleep(0.2)
+                print(f"✔️ Auto‑selected dropdown '{EXP_DEF}'")
+            time.sleep(0.2)
 
-    # 3) Text inputs & textareas
+    # 4) Text inputs
     for ctl in dialog.query_selector_all(
         'input:not([type="hidden"]):not([type="file"]):not([type="radio"]), textarea'
     ):
         if not ctl.input_value().strip():
             ctl.fill(EXP_DEF)
-            print(f"✔️ Auto-filled input '{EXP_DEF}'")
+            print(f"✔️ Auto‑filled input '{EXP_DEF}'")
 
 def apply_to_jobs():
     with sync_playwright() as p:
@@ -125,14 +129,29 @@ def apply_to_jobs():
 
         for i in range(limit):
             try:
-                cards[i].click()
-                time.sleep(random.uniform(2,5))
-                url = page.url
+                card = cards[i]
 
-                if already_applied(url):
-                    print("⚠️ Already applied—skipping"); continue
+                # — EXTRACT job_title & company_name from the card itself —
+                job_title = card.inner_text().strip()
+                company_name = card.evaluate("""el => {
+                    const cardRoot = el.closest('div.job-card-container');
+                    if (!cardRoot) return '';
+                    const sub = cardRoot.querySelector('.artdeco-entity-lockup__subtitle span');
+                    return sub ? sub.innerText.trim() : '';
+                }""") or "Unknown"
+
+                # — Open job detail —
+                card.click()
+                time.sleep(random.uniform(2,5))
+
+                job_url = page.url
+                if already_applied(job_url):
+                    print("⚠️ Already applied—skipping")
+                    continue
+
                 if not page.is_visible("button.jobs-apply-button"):
-                    print("No Easy Apply—skipping"); continue
+                    print("No Easy Apply—skipping")
+                    continue
 
                 # — Easy Apply —
                 page.click("button.jobs-apply-button")
@@ -147,11 +166,7 @@ def apply_to_jobs():
                     if page.is_visible('button[aria-label="Submit application"]'):
                         page.click('button[aria-label="Submit application"]')
                         print("✅ Application submitted")
-                        title = (page.inner_text('h2.topcard__title')
-                                 if page.is_visible('h2.topcard__title') else "Unknown")
-                        comp  = (page.inner_text('span.topcard__flavor')
-                                 if page.is_visible('span.topcard__flavor') else "Unknown")
-                        log_application(title, comp, url, "success")
+                        log_application(job_title, company_name, job_url, "success")
 
                         # close any post‑submit modal
                         for sel in [
@@ -170,7 +185,8 @@ def apply_to_jobs():
                     if page.is_visible('button[aria-label="Review your application"]'):
                         page.click('button[aria-label="Review your application"]')
                         print("Clicked Review")
-                        time.sleep(random.uniform(2,4)); continue
+                        time.sleep(random.uniform(2,4))
+                        continue
 
                     if ( page.is_visible('button[aria-label="Continue to next step"]') or
                          page.is_visible('button:has-text("Next")') ):
@@ -179,7 +195,8 @@ def apply_to_jobs():
                           ' button:has-text("Next")'
                         )
                         print("Clicked Next")
-                        time.sleep(random.uniform(2,4)); continue
+                        time.sleep(random.uniform(2,4))
+                        continue
 
                     break
 
