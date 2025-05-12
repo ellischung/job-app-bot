@@ -28,7 +28,7 @@ def log_application(title, company, url, status):
         )
     """)
     c.execute("""
-        INSERT INTO_applied_jobs (timestamp,platform,job_title,company,job_url,status)
+        INSERT INTO applied_jobs (timestamp,platform,job_title,company,job_url,status)
         VALUES (?,?,?,?,?,?)
     """, (datetime.now().isoformat(), "LinkedIn", title, company, url, status))
     conn.commit()
