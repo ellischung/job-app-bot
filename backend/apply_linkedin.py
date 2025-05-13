@@ -98,15 +98,17 @@ def apply_to_jobs():
         for i in range(limit):
             try:
                 card = cards[i]
-                # Extract title & company from the card
-                job_title = card.get_attribute("aria-label") or "Unknown"
+
+                # EXTRACT title & company name
+                title_el = card.query_selector('span[aria-hidden="true"]')
+                job_title = title_el.inner_text().strip() if title_el else (card.get_attribute("aria-label") or "Unknown")
                 company_name = card.evaluate("""el => {
                     const root = el.closest('div.job-card-container');
                     const sub  = root?.querySelector('.artdeco-entity-lockup__subtitle span');
                     return sub ? sub.innerText.trim() : '';
                 }""") or "Unknown"
 
-                # navigate to detail
+                # navigate into the job detail page
                 card.click()
                 time.sleep(random.uniform(2,5))
                 job_url = page.url
