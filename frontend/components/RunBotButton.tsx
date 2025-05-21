@@ -9,7 +9,7 @@ export default function RunBotButton() {
     setLogs([])
     setRunning(true)
 
-    const es = new EventSource('/api/run-bot-sse')
+    const es = new EventSource('/api/run-bot')
 
     es.onmessage = (e) => {
       // append each line as it arrives
@@ -17,13 +17,13 @@ export default function RunBotButton() {
     }
 
     es.addEventListener('done', (e) => {
-      setLogs((prev) => [...prev, `✅ Bot finished (${e.data})`])
+      setLogs((prev) => [...prev, `[OK] Bot finished (${e.data})`])
       setRunning(false)
       es.close()
     })
 
     es.onerror = () => {
-      setLogs((prev) => [...prev, '❌ Connection error'])
+      setLogs((prev) => [...prev, '[X] Connection error'])
       setRunning(false)
       es.close()
     }

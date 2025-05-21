@@ -1,8 +1,13 @@
+import sys
 from playwright.sync_api import sync_playwright
 import json
 import time
 import random
 import db
+
+# Update std to show in UI
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
 # Default answers
 EXP_DEF = "3"
@@ -33,7 +38,7 @@ def fill_all_blanks(page):
             ctl = block.query_selector("input, textarea, select")
             if ctl:
                 ctl.fill(config["home_address"])
-                print(f"✔️ Filled '{q}' with home address")
+                print(f"[OK] Filled '{q}' with home address")
             continue
 
     # 2) Radios
@@ -42,7 +47,7 @@ def fill_all_blanks(page):
         lbl = dialog.query_selector(f'label[for="{rid}"]') if rid else None
         if lbl:
             lbl.click()
-            print("✔️ Auto‑selected radio 'Yes'")
+            print("[OK] Auto‑selected radio 'Yes'")
             time.sleep(0.2)
 
     # 3) Selects
@@ -52,10 +57,10 @@ def fill_all_blanks(page):
         if curr in ("", "select an option"):
             if "yes" in opts and "no" in opts:
                 ctl.select_option(index=opts.index("yes"))
-                print("✔️ Auto‑selected dropdown 'Yes'")
+                print("[OK] Auto‑selected dropdown 'Yes'")
             elif all(opt.isdigit() for opt in opts):
                 ctl.select_option(value=EXP_DEF)
-                print(f"✔️ Auto‑selected dropdown '{EXP_DEF}'")
+                print(f"[OK] Auto‑selected dropdown '{EXP_DEF}'")
             time.sleep(0.2)
 
     # 4) Text inputs
@@ -64,7 +69,7 @@ def fill_all_blanks(page):
     ):
         if not ctl.input_value().strip():
             ctl.fill(EXP_DEF)
-            print(f"✔️ Auto‑filled input '{EXP_DEF}'")
+            print(f"[OK] Auto‑filled input '{EXP_DEF}'")
 
 def apply_to_jobs():
     # ensure our table exists
@@ -132,7 +137,7 @@ def apply_to_jobs():
 
                     if page.is_visible('button[aria-label="Submit application"]'):
                         page.click('button[aria-label="Submit application"]')
-                        print("✅ Application submitted")
+                        print("[SUCCESS] Application submitted")
                         db.log_application(job_title, company_name, job_url, "success")
 
                         # close any post‑submit modal
