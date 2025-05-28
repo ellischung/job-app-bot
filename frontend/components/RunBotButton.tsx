@@ -1,5 +1,8 @@
 'use client'
-import React, { useState } from 'react'
+
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
 export default function RunBotButton() {
   const [running, setRunning] = useState(false)
@@ -8,44 +11,41 @@ export default function RunBotButton() {
   const handleRun = () => {
     setLogs([])
     setRunning(true)
-
     const es = new EventSource('/api/run-bot')
 
-    es.onmessage = (e) => {
-      // append each line as it arrives
-      setLogs((prev) => [...prev, e.data])
+    es.onmessage = e => {
+      setLogs(prev => [...prev, e.data])
     }
-
-    es.addEventListener('done', (e) => {
-      setLogs((prev) => [...prev, `[OK] Bot finished (${e.data})`])
+    es.addEventListener('done', e => {
+      setLogs(prev => [...prev, `✅ Finished (${e.data})`])
       setRunning(false)
       es.close()
     })
-
     es.onerror = () => {
-      setLogs((prev) => [...prev, '[X] Connection error'])
+      setLogs(prev => [...prev, `❌ Connection error`])
       setRunning(false)
       es.close()
     }
   }
 
   return (
-    <div className="my-4">
-      <button
-        onClick={handleRun}
-        disabled={running}
-        className={`px-4 py-2 rounded ${
-          running ? 'bg-gray-500' : 'bg-blue-600 hover:bg-blue-700'
-        } text-white`}
-      >
-        {running ? 'Running…' : 'Run Bot Now'}
-      </button>
-
-      <pre className="mt-4 p-4 bg-gray-800 text-white rounded max-h-64 overflow-auto font-mono text-sm">
-        {logs.map((line, i) => (
-          <div key={i}>{line}</div>
-        ))}
-      </pre>
-    </div>
+    <Card className="bg-gray-800 border-gray-700 font-mono my-4">
+      <CardContent>
+        <Button
+          onClick={handleRun}
+          disabled={running}
+          className={`${
+            running ? 'bg-gray-600' : 'bg-green-600 hover:bg-green-700'
+          } text-black mb-2`}
+        >
+          {running ? 'Running…' : 'Run Bot Now'}
+        </Button>
+        <pre className="h-48 overflow-auto bg-gray-900 p-2 text-green-200">
+          {logs.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </pre>
+      </CardContent>
+    </Card>
   )
 }

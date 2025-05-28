@@ -4,14 +4,12 @@ import LogsTable from '@/components/LogsTable'
 
 export default function Page() {
   return (
-    <main className="p-6 grid md:grid-cols-3 gap-6">
-      <section className="md:col-span-1">
-        <h2 className="text-xl font-bold mb-4">Settings</h2>
+    <main className="min-h-screen bg-gray-900 text-green-200 font-mono p-6 grid md:grid-cols-3 gap-6">
+      <section className="md:col-span-1 space-y-4">
         <ConfigForm />
         <RunBotButton />
       </section>
       <section className="md:col-span-2">
-        <h2 className="text-xl font-bold mb-4">Applied Jobs</h2>
         <LogsTable />
       </section>
     </main>
