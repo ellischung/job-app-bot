@@ -49,7 +49,7 @@ export default function RunBotButton() {
         <Button
           onClick={handleRun}
           disabled={running}
-          className={`${running ? 'bg-gray-700' : 'bg-green-600 hover:bg-green-700'} text-black`}
+          className={`${running ? 'bg-gray-700' : 'bg-green-600 hover:bg-green-700'} text-black cursor-pointer`}
         >
           {running ? 'Running…' : 'Run Bot Now'}
         </Button>

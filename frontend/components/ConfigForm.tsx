@@ -116,7 +116,7 @@ export default function ConfigForm() {
         </div>
         <Button
           onClick={save}
-          className="bg-green-600 hover:bg-green-700 text-black"
+          className="bg-green-600 hover:bg-green-700 text-black cursor-pointer"
         >
           Save
         </Button>
