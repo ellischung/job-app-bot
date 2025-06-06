@@ -71,7 +71,7 @@ def fill_all_blanks(page):
             ctl.fill(EXP_DEF)
             print(f"[OK] Auto‑filled input '{EXP_DEF}'")
 
-def apply_to_jobs():
+def apply_to_jobs(limit: int = 5):
     # ensure our table exists
     db.init_db()
 
@@ -97,8 +97,8 @@ def apply_to_jobs():
 
         cards = page.query_selector_all("a.job-card-container__link")
         total = len(cards)
-        limit = min(5, total)
-        print(f"Found {total} jobs. Attempting up to {limit}...")
+        to_apply = min(limit, total)
+        print(f"Found {total} jobs. Attempting up to {to_apply}...")
 
         for i in range(limit):
             try:

@@ -1,5 +1,5 @@
 import ConfigForm from '@/components/ConfigForm'
-import RunBotButton from '@/components/RunBotButton'
+import BotTerminal from '@/components/BotTerminal'
 import LogsTable from '@/components/LogsTable'
 
 export default function Page() {
@@ -7,7 +7,7 @@ export default function Page() {
     <main className="min-h-screen bg-gray-900 text-green-200 font-mono p-6 grid md:grid-cols-3 gap-6">
       <section className="md:col-span-1 space-y-4">
         <ConfigForm />
-        <RunBotButton />
+        <BotTerminal />
       </section>
       <section className="md:col-span-2">
         <LogsTable />
