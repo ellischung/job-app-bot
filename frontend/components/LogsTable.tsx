@@ -10,6 +10,7 @@ import {
   TableCell
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 type Job = {
   id: number
@@ -29,16 +30,25 @@ export default function LogsTable() {
       .then(setJobs)
   }, [])
 
-  // Truncate helper
-  const truncate = (s: string, maxLen = 50) =>
+  // truncate string helper
+  const truncate = (s: string, maxLen = 35) =>
     s.length > maxLen ? s.slice(0, maxLen) + '…' : s
 
   return (
     <Card className="bg-gray-800 border border-gray-700 font-mono">
-      <CardHeader>
+      <CardHeader className="flex items-center justify-between">
         <CardTitle className="text-green-400">Applied Jobs</CardTitle>
+        <Button
+          onClick={() => {
+            window.location.href = '/api/logs/export'
+          }}
+          className="bg-green-600 hover:bg-green-700 text-black cursor-pointer"
+        >
+          Export CSV
+        </Button>
       </CardHeader>
-      <CardContent>
+
+      <CardContent className="overflow-auto">
         <Table className="table-auto w-full border border-gray-700">
           <TableHeader>
             <TableRow className="bg-gray-900">
@@ -56,6 +66,7 @@ export default function LogsTable() {
               </TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {jobs.map((j) => (
               <TableRow key={j.id} className="border-t border-gray-700">
@@ -70,7 +81,7 @@ export default function LogsTable() {
                     className="hover:underline"
                     title={j.job_title}
                   >
-                    {truncate(j.job_title, 50)} 
+                    {truncate(j.job_title, 50)}
                   </a>
                 </TableCell>
                 <TableCell
