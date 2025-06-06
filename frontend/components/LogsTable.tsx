@@ -29,8 +29,8 @@ export default function LogsTable() {
       .then(setJobs)
   }, [])
 
-  // Helper to truncate titles at 40 characters + “…” if longer
-  const truncate = (s: string, maxLen = 40) =>
+  // Truncate helper
+  const truncate = (s: string, maxLen = 50) =>
     s.length > maxLen ? s.slice(0, maxLen) + '…' : s
 
   return (
@@ -42,16 +42,16 @@ export default function LogsTable() {
         <Table className="table-auto w-full border border-gray-700">
           <TableHeader>
             <TableRow className="bg-gray-900">
-              <TableHead className="w-1/5 whitespace-nowrap px-4 py-2 text-green-300">
+              <TableHead className="w-1/6 whitespace-nowrap px-4 py-2 text-green-300">
                 Time
               </TableHead>
-              <TableHead className="w-2/5 px-4 py-2 text-green-300">
+              <TableHead className="w-5/12 px-4 py-2 text-green-300">
                 Title
               </TableHead>
-              <TableHead className="w-1/5 px-4 py-2 text-green-300">
+              <TableHead className="w-1/3 px-4 py-2 text-green-300">
                 Company
               </TableHead>
-              <TableHead className="w-1/5 whitespace-nowrap px-4 py-2 text-green-300">
+              <TableHead className="w-1/12 whitespace-nowrap px-4 py-2 text-green-300">
                 Status
               </TableHead>
             </TableRow>
@@ -59,30 +59,26 @@ export default function LogsTable() {
           <TableBody>
             {jobs.map((j) => (
               <TableRow key={j.id} className="border-t border-gray-700">
-                {/* Time (fixed width, no wrap) */}
                 <TableCell className="whitespace-nowrap px-4 py-2 text-green-200">
                   {new Date(j.timestamp).toLocaleString()}
                 </TableCell>
-
-                {/* Title (truncate at 40 chars, show full title on hover) */}
                 <TableCell className="px-4 py-2 text-green-400">
                   <a
                     href={j.job_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:underline"
-                    title={j.job_title} // full title on hover
+                    title={j.job_title}
                   >
-                    {truncate(j.job_title, 40)}
+                    {truncate(j.job_title, 50)} 
                   </a>
                 </TableCell>
-
-                {/* Company (truncate if extremely long) */}
-                <TableCell className="px-4 py-2 text-green-200 overflow-hidden truncate" title={j.company}>
-                  {truncate(j.company, 30)}
+                <TableCell
+                  className="px-4 py-2 text-green-200 overflow-hidden truncate"
+                  title={j.company}
+                >
+                  {truncate(j.company, 40)}
                 </TableCell>
-
-                {/* Status (fixed width, no wrap) */}
                 <TableCell className="whitespace-nowrap px-4 py-2 text-green-200">
                   {j.status}
                 </TableCell>
