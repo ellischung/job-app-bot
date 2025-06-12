@@ -1,31 +1,38 @@
-import { NextResponse } from "next/server";
-import path from "path";
-import { spawn } from "child_process";
+import { NextResponse } from "next/server"
+import fs from "fs"
+import path from "path"
+import { spawn } from "child_process"
 
 export async function POST() {
-  const backendDir = path.join(process.cwd(), "..", "backend");
-  const python = process.platform === "win32"
-    ? path.join(backendDir, "venv", "Scripts", "python.exe")
-    : path.join(backendDir, "venv", "bin", "python");
-  const schedulerScript = path.join(backendDir, "scheduler.py");
+  const backendDir = path.join(process.cwd(), "..", "backend")
+  const pidPath    = path.join(backendDir, "scheduler.pid")
 
-  // if PID file exists, don't start again
-  const pidFile = path.join(backendDir, "scheduler.pid");
-  if (require("fs").existsSync(pidFile)) {
-    return NextResponse.json({ success: false, message: "Scheduler already running." });
+  if (fs.existsSync(pidPath)) {
+    return NextResponse.json({ success: false, message: "Scheduler already running." })
   }
 
-  // spawn detached python process
-  const child = spawn(python, [schedulerScript], {
+  // On Windows, use pythonw.exe (no console window); otherwise normal python
+  const python = process.platform === "win32"
+    ? path.join(backendDir, "venv", "Scripts", "pythonw.exe")
+    : path.join(backendDir, "venv", "bin", "python")
+  const script = path.join(backendDir, "scheduler.py")
+
+  // Launch detached, no pop up
+  const child = spawn(python, [script], {
     cwd: backendDir,
     env: { ...process.env },
     detached: true,
     stdio: "ignore",
-    windowsHide: true
-  });
+    windowsHide: true,
+  })
 
-  // detach so Node does not wait for it
-  child.unref();
+  // Write PID (to stop later)
+  if (child.pid) {
+    fs.writeFileSync(pidPath, child.pid.toString(), "utf-8")
+  }
 
-  return NextResponse.json({ success: true, message: "Scheduler started." });
+  // Keep running after this process exits
+  child.unref()
+
+  return NextResponse.json({ success: true, message: "Scheduler started." })
 }
