@@ -3,6 +3,18 @@ import fs from 'fs'
 import path from 'path'
 
 const CONFIG_PATH = path.join(process.cwd(), '..', 'backend', 'config.json')
+const ALLOWED_KEYS = new Set([
+  'name',
+  'email',
+  'phone',
+  'home_address',
+  'resume_path',
+  'linkedin_email',
+  'linkedin_password',
+  'linkedin_keywords',
+  'location',
+  'interval_minutes'
+])
 
 export async function GET() {
   try {
@@ -15,27 +27,45 @@ export async function GET() {
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function PATCH(req: NextRequest) {
+  let existing: Record<string, any>
   try {
-    // Read and process the existing file
-    const raw = await fs.promises.readFile(CONFIG_PATH, 'utf-8')
-    const existingConfig = JSON.parse(raw)
-    const body = await req.json()
+    existing = JSON.parse(
+      await fs.promises.readFile(CONFIG_PATH, 'utf-8')
+    )
+  } catch (err) {
+    console.error('PATCH /api/config read error:', err)
+    return NextResponse.json({ error: 'Could not read config' }, { status: 500 })
+  }
 
-    // Merge
-    const merged = { ...existingConfig, ...body }
+  let body: Record<string, any>
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
 
-    // Write merged object back to disk
+  // ensure only allowed fields are being updated
+  for (const key of Object.keys(body)) {
+    if (!ALLOWED_KEYS.has(key)) {
+      return NextResponse.json(
+        { error: `Unknown config field: ${key}` },
+        { status: 400 }
+      )
+    }
+  }
+
+  const merged = { ...existing, ...body }
+  try {
     await fs.promises.writeFile(
       CONFIG_PATH,
       JSON.stringify(merged, null, 2),
       'utf-8'
     )
-
-    // updated config
-    return NextResponse.json(merged)
   } catch (err) {
-    console.error('PUT /api/config error:', err)
+    console.error('PATCH /api/config write error:', err)
     return NextResponse.json({ error: 'Could not update config' }, { status: 500 })
   }
+
+  return NextResponse.json(merged)
 }
