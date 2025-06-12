@@ -81,29 +81,29 @@ export default function BotTerminal() {
       <CardContent className="space-y-2">
         <div className="flex space-x-2">
           <Button
-            onClick={handleRunNow}
-            disabled={running || scheduling}
-            className={`${
-              running ? 'bg-gray-700' : 'bg-green-600 hover:bg-green-700'
-            } text-black`}
-          >
-            {running ? 'Running…' : 'Run Bot Now'}
-          </Button>
-          <Button
             onClick={handleStartScheduler}
             disabled={scheduling || running}
             className={`${
-              scheduling ? 'bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'
-            } text-white`}
+              scheduling ? 'bg-gray-700' : 'bg-green-600 hover:bg-green-700'
+            } text-black cursor-pointer`}
           >
             {scheduling ? 'Working…' : 'Start Scheduler'}
           </Button>
           <Button
             onClick={handleStopScheduler}
             disabled={scheduling || running}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
           >
             Stop Scheduler
+          </Button>
+          <Button
+            onClick={handleRunNow}
+            disabled={running || scheduling}
+            className={`${
+              running ? 'bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'
+            } text-white cursor-pointer`}
+          >
+            {running ? 'Running…' : 'Run Script'}
           </Button>
         </div>
 

@@ -40,8 +40,8 @@ export default function LogsTable() {
   useEffect(() => {
     // initial load
     fetchLogs()
-    // refresh applied apps every 10 secs
-    const iv = setInterval(fetchLogs, 10_000)
+    // refresh applied apps every 20 secs
+    const iv = setInterval(fetchLogs, 20_000)
     return () => clearInterval(iv)
   }, [])
 
@@ -56,13 +56,13 @@ export default function LogsTable() {
           <Button
             onClick={fetchLogs}
             disabled={loading}
-            className="bg-gray-600 hover:bg-gray-700 text-white"
+            className="bg-gray-600 hover:bg-gray-700 text-white cursor-pointer"
           >
             {loading ? 'Refreshing…' : 'Refresh'}
           </Button>
           <Button
             onClick={() => window.location.href = '/api/logs/export'}
-            className="bg-green-600 hover:bg-green-700 text-black"
+            className="bg-green-600 hover:bg-green-700 text-black cursor-pointer"
           >
             Export CSV
           </Button>
