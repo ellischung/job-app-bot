@@ -23,29 +23,50 @@ type Job = {
 
 export default function LogsTable() {
   const [jobs, setJobs] = useState<Job[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const fetchLogs = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/logs')
+      if (res.ok) setJobs(await res.json())
+    } catch (e) {
+      console.error('Failed to fetch logs', e)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    fetch('/api/logs')
-      .then((r) => r.json())
-      .then(setJobs)
+    // initial load
+    fetchLogs()
+    // refresh applied apps every 10 secs
+    const iv = setInterval(fetchLogs, 10_000)
+    return () => clearInterval(iv)
   }, [])
 
-  // truncate string helper
-  const truncate = (s: string, maxLen = 35) =>
+  const truncate = (s: string, maxLen = 50) =>
     s.length > maxLen ? s.slice(0, maxLen) + '…' : s
 
   return (
     <Card className="bg-gray-800 border border-gray-700 font-mono">
       <CardHeader className="flex items-center justify-between">
         <CardTitle className="text-green-400">Applied Jobs</CardTitle>
-        <Button
-          onClick={() => {
-            window.location.href = '/api/logs/export'
-          }}
-          className="bg-green-600 hover:bg-green-700 text-black cursor-pointer"
-        >
-          Export CSV
-        </Button>
+        <div className="space-x-2">
+          <Button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="bg-gray-600 hover:bg-gray-700 text-white"
+          >
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </Button>
+          <Button
+            onClick={() => window.location.href = '/api/logs/export'}
+            className="bg-green-600 hover:bg-green-700 text-black"
+          >
+            Export CSV
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="overflow-auto">
@@ -68,7 +89,7 @@ export default function LogsTable() {
           </TableHeader>
 
           <TableBody>
-            {jobs.map((j) => (
+            {jobs.map(j => (
               <TableRow key={j.id} className="border-t border-gray-700">
                 <TableCell className="whitespace-nowrap px-4 py-2 text-green-200">
                   {new Date(j.timestamp).toLocaleString()}
@@ -81,14 +102,14 @@ export default function LogsTable() {
                     className="hover:underline"
                     title={j.job_title}
                   >
-                    {truncate(j.job_title, 50)}
+                    {truncate(j.job_title)}
                   </a>
                 </TableCell>
                 <TableCell
                   className="px-4 py-2 text-green-200 overflow-hidden truncate"
                   title={j.company}
                 >
-                  {truncate(j.company, 40)}
+                  {truncate(j.company, 35)}
                 </TableCell>
                 <TableCell className="whitespace-nowrap px-4 py-2 text-green-200">
                   {j.status}

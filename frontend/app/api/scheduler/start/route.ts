@@ -20,7 +20,8 @@ export async function POST() {
     cwd: backendDir,
     env: { ...process.env },
     detached: true,
-    stdio: "ignore"
+    stdio: "ignore",
+    windowsHide: true
   });
 
   // detach so Node does not wait for it
