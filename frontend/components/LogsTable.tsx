@@ -23,25 +23,32 @@ type Job = {
 
 export default function LogsTable() {
   const [jobs, setJobs] = useState<Job[]>([])
-  const [loading, setLoading] = useState(false)
+  const [manualLoading, setManualLoading] = useState(false)
 
-  const fetchLogs = async () => {
-    setLoading(true)
+  const fetchJobs = async () => {
     try {
       const res = await fetch('/api/logs')
-      if (res.ok) setJobs(await res.json())
+      if (res.ok) {
+        setJobs(await res.json())
+      }
     } catch (e) {
       console.error('Failed to fetch logs', e)
-    } finally {
-      setLoading(false)
     }
+  }
+
+  // manual refreshing for logs
+  const handleRefresh = async () => {
+    setManualLoading(true)
+    await fetchJobs()
+    setManualLoading(false)
   }
 
   useEffect(() => {
     // initial load
-    fetchLogs()
-    // refresh applied apps every 20 secs
-    const iv = setInterval(fetchLogs, 20_000)
+    fetchJobs()
+
+    // auto‐refresh every 20 seconds
+    const iv = setInterval(fetchJobs, 20_000)
     return () => clearInterval(iv)
   }, [])
 
@@ -54,11 +61,11 @@ export default function LogsTable() {
         <CardTitle className="text-green-400">Applied Jobs</CardTitle>
         <div className="space-x-2">
           <Button
-            onClick={fetchLogs}
-            disabled={loading}
+            onClick={handleRefresh}
+            disabled={manualLoading}
             className="bg-gray-600 hover:bg-gray-700 text-white cursor-pointer"
           >
-            {loading ? 'Refreshing…' : 'Refresh'}
+            {manualLoading ? 'Refreshing…' : 'Refresh'}
           </Button>
           <Button
             onClick={() => window.location.href = '/api/logs/export'}
