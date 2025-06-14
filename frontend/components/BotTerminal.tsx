@@ -11,67 +11,58 @@ export default function BotTerminal() {
   const [logs, setLogs] = useState<string[]>([])
   const wrapperRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll down inside the Radix ScrollArea whenever logs update
+  // Auto-scroll inside the Radix ScrollArea whenever logs change
   useEffect(() => {
     const root = wrapperRef.current
     if (!root) return
-    const viewport = root.querySelector(
+    const vp = root.querySelector(
       '[data-slot="scroll-area-viewport"]'
     ) as HTMLElement | null
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight
-    }
+    if (vp) vp.scrollTop = vp.scrollHeight
   }, [logs])
 
-  // 1) Run Bot Now
+  // Handlers: (start/stop schedule, running script once)
   const handleRunNow = () => {
     setLogs([])
     setRunning(true)
-
     const es = new EventSource('/api/run-bot')
-    es.onmessage = (e) => {
-      setLogs((prev) => [...prev, e.data])
-    }
-    es.addEventListener('done', (e) => {
-      setLogs((prev) => [...prev, `✅ Finished (${e.data})`])
+    es.onmessage = e => setLogs(prev => [...prev, e.data])
+    es.addEventListener('done', e => {
+      setLogs(prev => [...prev, `✅ Finished (${e.data})`])
       setRunning(false)
       es.close()
     })
     es.onerror = () => {
-      setLogs((prev) => [...prev, `❌ Connection error`])
+      setLogs(prev => [...prev, `❌ Connection error`])
       setRunning(false)
       es.close()
     }
   }
 
-  // 2) Start Scheduler
   const handleStartScheduler = async () => {
     setScheduling(true)
     try {
       const res = await fetch('/api/scheduler/start', { method: 'POST' })
-      if (res.ok) {
-        setLogs((prev) => [...prev, '[OK] Scheduler started.'])
-      } else {
-        setLogs((prev) => [...prev, '[X] Failed to start scheduler'])
-      }
+      setLogs(prev => [
+        ...prev,
+        res.ok ? '[OK] Scheduler started.' : '[X] Scheduler failed to start.',
+      ])
     } catch {
-      setLogs((prev) => [...prev, '[X] Network error starting scheduler'])
+      setLogs(prev => [...prev, '[X] Network error starting scheduler'])
     }
     setScheduling(false)
   }
 
-  // 3) Stop Scheduler
   const handleStopScheduler = async () => {
     setScheduling(true)
     try {
       const res = await fetch('/api/scheduler/stop', { method: 'POST' })
-      if (res.ok) {
-        setLogs((prev) => [...prev, '[OK] Scheduler stopped.'])
-      } else {
-        setLogs((prev) => [...prev, '[X] Failed to stop scheduler'])
-      }
+      setLogs(prev => [
+        ...prev,
+        res.ok ? '[OK] Scheduler stopped.' : '[X] Scheduler failed to stop.',
+      ])
     } catch {
-      setLogs((prev) => [...prev, '[X] Network error stopping scheduler'])
+      setLogs(prev => [...prev, '[X] Network error stopping scheduler'])
     }
     setScheduling(false)
   }
@@ -85,29 +76,34 @@ export default function BotTerminal() {
             disabled={scheduling || running}
             className={`${
               scheduling ? 'bg-gray-700' : 'bg-green-600 hover:bg-green-700'
-            } text-black cursor-pointer`}
+            } text-black`}
           >
-            {scheduling ? 'Working…' : 'Start Scheduler'}
+            <span className="inline xl:hidden">Start</span>
+            <span className="hidden xl:inline">Start Scheduler</span>
           </Button>
+
           <Button
             onClick={handleStopScheduler}
             disabled={scheduling || running}
-            className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
+            className="bg-red-600 hover:bg-red-700 text-white"
           >
-            Stop Scheduler
+            <span className="inline xl:hidden">Stop</span>
+            <span className="hidden xl:inline">Stop Scheduler</span>
           </Button>
+
           <Button
             onClick={handleRunNow}
             disabled={running || scheduling}
             className={`${
               running ? 'bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'
-            } text-white cursor-pointer`}
+            } text-white`}
           >
-            {running ? 'Running…' : 'Run Script'}
+            <span className="inline xl:hidden">Run</span>
+            <span className="hidden xl:inline">Run Script</span>
           </Button>
         </div>
 
-        {/* Log panel */}
+        {/* Terminal log panel */}
         <div ref={wrapperRef} className="h-48 bg-black rounded overflow-hidden">
           <ScrollArea className="h-full">
             <div className="p-2 text-green-400 text-sm space-y-1">
