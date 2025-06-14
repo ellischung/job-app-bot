@@ -76,7 +76,7 @@ export default function BotTerminal() {
             disabled={scheduling || running}
             className={`${
               scheduling ? 'bg-gray-700' : 'bg-green-600 hover:bg-green-700'
-            } text-black`}
+            } text-black cursor-pointer`}
           >
             <span className="inline xl:hidden">Start</span>
             <span className="hidden xl:inline">Start Scheduler</span>
@@ -85,7 +85,7 @@ export default function BotTerminal() {
           <Button
             onClick={handleStopScheduler}
             disabled={scheduling || running}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-red-600 hover:bg-red-700 text-white cursor-pointer"
           >
             <span className="inline xl:hidden">Stop</span>
             <span className="hidden xl:inline">Stop Scheduler</span>
@@ -96,7 +96,7 @@ export default function BotTerminal() {
             disabled={running || scheduling}
             className={`${
               running ? 'bg-gray-700' : 'bg-gray-600 hover:bg-gray-700'
-            } text-white`}
+            } text-white cursor-pointer`}
           >
             <span className="inline xl:hidden">Run</span>
             <span className="hidden xl:inline">Run Script</span>
