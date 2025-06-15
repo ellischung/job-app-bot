@@ -47,8 +47,8 @@ export default function LogsTable() {
     // initial load
     fetchJobs()
 
-    // auto‐refresh every 20 seconds
-    const iv = setInterval(fetchJobs, 20_000)
+    // auto‐refresh every 15 seconds
+    const iv = setInterval(fetchJobs, 15_000)
     return () => clearInterval(iv)
   }, [])
 
