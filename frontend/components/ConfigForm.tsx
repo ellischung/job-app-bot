@@ -22,12 +22,16 @@ type Config = {
 
 export default function ConfigForm() {
   const [cfg, setCfg] = useState<Config | null>(null)
+  const [keywordsText, setKeywordsText] = useState<string>('')
   const [status, setStatus] = useState<string>('')
 
   useEffect(() => {
     fetch('/api/config')
       .then(r => r.json())
-      .then(setCfg)
+      .then(data => {
+        setCfg(data)
+        setKeywordsText(data.linkedin_keywords.join(', '))
+      })
   }, [])
 
   if (!cfg) return <p className="text-green-400 font-mono">Loading…</p>
@@ -35,19 +39,31 @@ export default function ConfigForm() {
   const onChange = (k: keyof Config, v: any) =>
     setCfg(c => c ? { ...c, [k]: v } : c)
 
-  // PATCH only the changed fields and merge
+  // PATCH and merge changed fields, mod text input for keywords
   const save = async () => {
     setStatus('Saving…')
+    
+    const payload = {
+      ...cfg!,
+      linkedin_keywords: keywordsText
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean),
+    }
+
     const res = await fetch('/api/config', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cfg),
+      body: JSON.stringify(payload),
     })
+
     if (res.ok) {
+      setCfg(payload)
       setStatus('Saved!')
     } else {
       setStatus('Error saving')
     }
+
     setTimeout(() => setStatus(''), 2000)
   }
 
@@ -103,16 +119,8 @@ export default function ConfigForm() {
           <Textarea
             className="bg-gray-900 text-green-100"
             rows={2}
-            value={cfg.linkedin_keywords.join(', ')}
-            onChange={e =>
-              onChange(
-                'linkedin_keywords',
-                e.target.value
-                  .split(',')
-                  .map(s => s.trim())
-                  .filter(Boolean)
-              )
-            }
+            value={keywordsText}
+            onChange={e => setKeywordsText(e.target.value)}
           />
         </div>
         <div>
