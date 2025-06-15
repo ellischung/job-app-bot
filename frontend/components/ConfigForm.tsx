@@ -134,10 +134,15 @@ export default function ConfigForm() {
         <div>
           <Label className="text-green-300">Interval (minutes)</Label>
           <Input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="\\d*"
             className="bg-gray-900 text-green-100"
-            value={cfg.interval_minutes}
-            onChange={e => onChange('interval_minutes', Number(e.target.value))}
+            value={cfg.interval_minutes.toString()}
+            onChange={e => {
+              const v = e.target.value
+              if (/^\d*$/.test(v)) onChange('interval_minutes', Number(v))
+            }}
           />
         </div>
         <Button
