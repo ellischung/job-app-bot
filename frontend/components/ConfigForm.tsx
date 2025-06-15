@@ -17,6 +17,7 @@ type Config = {
   linkedin_password: string
   linkedin_keywords: string[]
   location: string
+  interval_minutes: number
 }
 
 export default function ConfigForm() {
@@ -34,14 +35,19 @@ export default function ConfigForm() {
   const onChange = (k: keyof Config, v: any) =>
     setCfg(c => c ? { ...c, [k]: v } : c)
 
+  // PATCH only the changed fields and merge
   const save = async () => {
     setStatus('Saving…')
-    await fetch('/api/config', {
-      method: 'PUT',
+    const res = await fetch('/api/config', {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cfg),
     })
-    setStatus('Saved!')
+    if (res.ok) {
+      setStatus('Saved!')
+    } else {
+      setStatus('Error saving')
+    }
     setTimeout(() => setStatus(''), 2000)
   }
 
@@ -101,7 +107,10 @@ export default function ConfigForm() {
             onChange={e =>
               onChange(
                 'linkedin_keywords',
-                e.target.value.split(',').map(s => s.trim())
+                e.target.value
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(Boolean)
               )
             }
           />
@@ -114,15 +123,22 @@ export default function ConfigForm() {
             onChange={e => onChange('location', e.target.value)}
           />
         </div>
+        <div>
+          <Label className="text-green-300">Interval (minutes)</Label>
+          <Input
+            type="number"
+            className="bg-gray-900 text-green-100"
+            value={cfg.interval_minutes}
+            onChange={e => onChange('interval_minutes', Number(e.target.value))}
+          />
+        </div>
         <Button
           onClick={save}
           className="bg-green-600 hover:bg-green-700 text-black cursor-pointer"
         >
           Save
         </Button>
-        {status && (
-          <p className="text-sm text-green-400 font-mono">{status}</p>
-        )}
+        {status && <p className="text-sm text-green-400 font-mono">{status}</p>}
       </CardContent>
     </Card>
   )
