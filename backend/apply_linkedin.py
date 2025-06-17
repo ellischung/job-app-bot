@@ -4,6 +4,7 @@ import json
 import time
 import random
 import db
+import re
 
 # Update std to show in UI
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
@@ -13,9 +14,11 @@ sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 EXP_DEF = "3"
 YES_NO = {"yes", "no"}
 
-# Load config
+# Load config and overrides
+overrides = {}
 with open("config.json") as f:
     config = json.load(f)
+    overrides = config.get("question_overrides", {})
 
 def cleanup_modals(page):
     if page.is_visible('button[aria-label="Dismiss"]'):
@@ -30,46 +33,85 @@ def fill_all_blanks(page):
     if not dialog:
         return
 
-    # 1) Location → home_address
+    # process each question block
     for block in dialog.query_selector_all("div.fb-dash-form-element"):
         lbl = block.query_selector("label")
         q = lbl.inner_text().strip().lower() if lbl else ""
-        if "location" in q:
-            ctl = block.query_selector("input, textarea, select")
-            if ctl:
-                ctl.fill(config["home_address"])
-                print(f"[OK] Filled '{q}' with home address")
+
+        # skip pre-filled "no" questions
+        radios = block.query_selector_all('input[type="radio"]')
+        if any(r.is_checked() and r.get_attribute("value").lower() == "no" for r in radios):
             continue
 
-    # 2) Radios
-    for r in dialog.query_selector_all('input[type="radio"][value="Yes"]:not(:checked)'):
-        rid = r.get_attribute("id")
-        lbl = dialog.query_selector(f'label[for="{rid}"]') if rid else None
-        if lbl:
-            lbl.click()
-            print("[OK] Auto‑selected radio 'Yes'")
-            time.sleep(0.2)
+        # override from config.json patterns
+        for pat, ans in overrides.items():
+            if re.search(pat, q, re.IGNORECASE):
+                # radio override
+                if radios:
+                    btn = block.query_selector(f'input[type="radio"][value="{ans.capitalize()}"]')
+                    if btn and not btn.is_checked():
+                        btn.click(); print(f"[OVERRIDE] {q} → {ans}")
+                        time.sleep(0.2)
+                    break
+                # select override
+                sel = block.query_selector('select')
+                if sel and not sel.input_value().strip():
+                    val = config.get(ans.strip('_'), ans)
+                    sel.select_option(label=val)
+                    print(f"[OVERRIDE] {q} → {val}")
+                    time.sleep(0.2)
+                    break
+                # text override
+                for ctl in block.query_selector_all(
+                    'input:not([type="hidden"]):not([type="file"]):not([type="radio"]), textarea'
+                ):
+                    if not ctl.input_value().strip():
+                        val = config.get(ans.strip('_'), ans)
+                        ctl.fill(val)
+                        print(f"[OVERRIDE] {q} → {val}")
+                        time.sleep(0.2)
+                        break
+                break
 
-    # 3) Selects
-    for ctl in dialog.query_selector_all('select'):
-        opts = [o.inner_text().strip().lower() for o in ctl.query_selector_all('option')]
-        curr = ctl.input_value().strip().lower()
-        if curr in ("", "select an option"):
-            if "yes" in opts and "no" in opts:
-                ctl.select_option(index=opts.index("yes"))
-                print("[OK] Auto‑selected dropdown 'Yes'")
-            elif all(opt.isdigit() for opt in opts):
-                ctl.select_option(value=EXP_DEF)
-                print(f"[OK] Auto‑selected dropdown '{EXP_DEF}'")
-            time.sleep(0.2)
+        else:
+            # Handle location -> auto-fill with address
+            if "location" in q:
+                ctl = block.query_selector("input, textarea, select")
+                if ctl:
+                    ctl.fill(config["home_address"])
+                    print(f"[OK] Filled '{q}' with home address")
+                continue
 
-    # 4) Text inputs
-    for ctl in dialog.query_selector_all(
-        'input:not([type="hidden"]):not([type="file"]):not([type="radio"]), textarea'
-    ):
-        if not ctl.input_value().strip():
-            ctl.fill(EXP_DEF)
-            print(f"[OK] Auto‑filled input '{EXP_DEF}'")
+            # Handle radios
+            for r in block.query_selector_all('input[type="radio"][value="Yes"]:not(:checked)'):
+                rid = r.get_attribute("id")
+                lbl2 = dialog.query_selector(f'label[for="{rid}"]') if rid else None
+                if lbl2:
+                    lbl2.click()
+                    print("[OK] Auto‑selected radio 'Yes'")
+                    time.sleep(0.2)
+
+            # Handle selects
+            for ctl in block.query_selector_all('select'):
+                opts = [o.inner_text().strip().lower() for o in ctl.query_selector_all('option')]
+                curr = ctl.input_value().strip().lower()
+                if curr in ("", "select an option"):
+                    if "yes" in opts and "no" in opts:
+                        ctl.select_option(index=opts.index("yes")) 
+                        print("[OK] Auto‑selected dropdown 'Yes'")
+                    elif all(opt.isdigit() for opt in opts):
+                        ctl.select_option(value=EXP_DEF) 
+                        print(f"[OK] Auto‑selected dropdown '{EXP_DEF}'")
+                    time.sleep(0.2)
+
+            # Handle text inputs
+            for ctl in block.query_selector_all(
+                'input:not([type="hidden"]):not([type="file"]):not([type="radio"]), textarea'
+            ):
+                if not ctl.input_value().strip():
+                    ctl.fill(EXP_DEF)
+                    print(f"[OK] Auto‑filled input '{EXP_DEF}'")
+                    time.sleep(0.2)
 
 def apply_to_jobs(limit: int = 5):
     # ensure our table exists
@@ -79,14 +121,14 @@ def apply_to_jobs(limit: int = 5):
         browser = p.chromium.launch(headless=False, slow_mo=50)
         page = browser.new_context().new_page()
 
-        # — Login —
+        # Login to Linkedin
         page.goto("https://www.linkedin.com/login")
         page.fill('input[name="session_key"]', config["linkedin_email"])
         page.fill('input[name="session_password"]', config["linkedin_password"])
         page.click('button[type="submit"]')
         time.sleep(5)
 
-        # — Search —
+        # Search for job
         kw  = "+".join(config["linkedin_keywords"])
         loc = config["location"].replace(" ", "%20")
         page.goto(
@@ -113,7 +155,7 @@ def apply_to_jobs(limit: int = 5):
                     return sub ? sub.innerText.trim() : '';
                 }""") or "Unknown"
 
-                # navigate into the job detail page
+                # navigate into job detail page
                 card.click()
                 time.sleep(random.uniform(2,5))
                 job_url = page.url
@@ -125,13 +167,13 @@ def apply_to_jobs(limit: int = 5):
                     print("No Easy Apply—skipping")
                     continue
 
-                # — Easy Apply —
+                # Easy Apply
                 page.click("button.jobs-apply-button")
                 time.sleep(random.uniform(2,5))
                 if page.is_visible('input[name="file"]'):
                     page.set_input_files('input[name="file"]', config["resume_path"])
 
-                # — Multi‑step form —
+                # Multi‑step form 
                 for _ in range(5):
                     fill_all_blanks(page)
 
