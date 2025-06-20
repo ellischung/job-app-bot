@@ -20,6 +20,7 @@ with open("config.json") as f:
     config = json.load(f)
     overrides = config.get("question_overrides", {})
 
+
 def cleanup_modals(page):
     if page.is_visible('button[aria-label="Dismiss"]'):
         page.click('button[aria-label="Dismiss"]')
@@ -27,6 +28,7 @@ def cleanup_modals(page):
     if page.is_visible('button:has-text("Discard")'):
         page.click('button:has-text("Discard")')
         time.sleep(1)
+
 
 def fill_all_blanks(page):
     dialog = page.query_selector('div[role="dialog"]')
@@ -113,6 +115,7 @@ def fill_all_blanks(page):
                     print(f"[OK] Auto‑filled input '{EXP_DEF}'")
                     time.sleep(0.2)
 
+
 def apply_to_jobs(limit: int = 5):
     # ensure our table exists
     db.init_db()
@@ -136,6 +139,16 @@ def apply_to_jobs(limit: int = 5):
           f"?keywords={kw}&location={loc}&f_AL=true"
         )
         time.sleep(5)
+
+        # Scroll window to exhaust more job apps
+        prev_count = 0
+        for _ in range(10):
+            page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
+            time.sleep(1)
+            cards_now = page.query_selector_all("a.job-card-container__link")
+            if len(cards_now) == prev_count:
+                break
+            prev_count = len(cards_now)
 
         cards = page.query_selector_all("a.job-card-container__link")
         total = len(cards)
