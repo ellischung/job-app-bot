@@ -13,6 +13,7 @@ const ALLOWED_KEYS = new Set([
   'linkedin_password',
   'linkedin_keywords',
   'location',
+  'question_overrides',
   'interval_minutes'
 ])
 
@@ -45,7 +46,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  // ensure only allowed fields are being updated
   for (const key of Object.keys(body)) {
     if (!ALLOWED_KEYS.has(key)) {
       return NextResponse.json(

@@ -39,12 +39,31 @@ export default function ConfigForm() {
   const onChange = (k: keyof Config, v: any) =>
     setCfg(c => c ? { ...c, [k]: v } : c)
 
-  // PATCH and merge changed fields, mod text input for keywords
   const save = async () => {
     setStatus('Saving…')
-    
+
+    const {
+      name,
+      email,
+      phone,
+      home_address,
+      resume_path,
+      linkedin_email,
+      linkedin_password,
+      location,
+      interval_minutes,
+    } = cfg!
+
     const payload = {
-      ...cfg!,
+      name,
+      email,
+      phone,
+      home_address,
+      resume_path,
+      linkedin_email,
+      linkedin_password,
+      location,
+      interval_minutes,
       linkedin_keywords: keywordsText
         .split(',')
         .map(s => s.trim())
@@ -58,7 +77,7 @@ export default function ConfigForm() {
     })
 
     if (res.ok) {
-      setCfg(payload)
+      setCfg({ ...cfg, ...payload })
       setStatus('Saved!')
     } else {
       setStatus('Error saving')
