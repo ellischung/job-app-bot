@@ -52,7 +52,8 @@ def fill_all_blanks(page):
                 if radios:
                     btn = block.query_selector(f'input[type="radio"][value="{ans.capitalize()}"]')
                     if btn and not btn.is_checked():
-                        btn.click(); print(f"[OVERRIDE] {q} → {ans}")
+                        btn.click()
+                        print(f"[OVERRIDE] {q} → {ans}")
                         time.sleep(0.2)
                     break
                 # select override
@@ -99,10 +100,10 @@ def fill_all_blanks(page):
                 curr = ctl.input_value().strip().lower()
                 if curr in ("", "select an option"):
                     if "yes" in opts and "no" in opts:
-                        ctl.select_option(index=opts.index("yes")) 
+                        ctl.select_option(index=opts.index("yes"))
                         print("[OK] Auto‑selected dropdown 'Yes'")
                     elif all(opt.isdigit() for opt in opts):
-                        ctl.select_option(value=EXP_DEF) 
+                        ctl.select_option(value=EXP_DEF)
                         print(f"[OK] Auto‑selected dropdown '{EXP_DEF}'")
                     time.sleep(0.2)
 
@@ -152,13 +153,15 @@ def apply_to_jobs(limit: int = 5):
 
         cards = page.query_selector_all("a.job-card-container__link")
         total = len(cards)
-        to_apply = min(limit, total)
-        print(f"Found {total} jobs. Attempting up to {to_apply}...")
+        print(f"{total} jobs found. {limit} attempts queued.")
 
-        for i in range(limit):
+        success_count = 0
+        idx = 0
+        # Keep applying until 'limit' jobs applied or exhausted list
+        while success_count < limit and idx < total:
+            card = cards[idx]
+            idx += 1
             try:
-                card = cards[i]
-
                 # EXTRACT title & company name
                 title_el = card.query_selector('span[aria-hidden="true"]')
                 job_title = title_el.inner_text().strip() if title_el else (card.get_attribute("aria-label") or "Unknown")
@@ -186,7 +189,7 @@ def apply_to_jobs(limit: int = 5):
                 if page.is_visible('input[name="file"]'):
                     page.set_input_files('input[name="file"]', config["resume_path"])
 
-                # Multi‑step form 
+                # Multi‑step form
                 for _ in range(5):
                     fill_all_blanks(page)
 
@@ -194,6 +197,7 @@ def apply_to_jobs(limit: int = 5):
                         page.click('button[aria-label="Submit application"]')
                         print("[SUCCESS] Application submitted")
                         db.log_application(job_title, company_name, job_url, "success")
+                        success_count += 1
 
                         # close any post‑submit modal
                         for sel in [
