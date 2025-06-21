@@ -53,7 +53,7 @@ def fill_all_blanks(page):
                     btn = block.query_selector(f'input[type="radio"][value="{ans.capitalize()}"]')
                     if btn and not btn.is_checked():
                         btn.click()
-                        print(f"[OVERRIDE] {q} → {ans}")
+                        print(f"[OVERRIDE] {q} -> {ans}")
                         time.sleep(0.2)
                     break
                 # select override
@@ -61,7 +61,7 @@ def fill_all_blanks(page):
                 if sel and not sel.input_value().strip():
                     val = config.get(ans.strip('_'), ans)
                     sel.select_option(label=val)
-                    print(f"[OVERRIDE] {q} → {val}")
+                    print(f"[OVERRIDE] {q} -> {val}")
                     time.sleep(0.2)
                     break
                 # text override
@@ -71,7 +71,7 @@ def fill_all_blanks(page):
                     if not ctl.input_value().strip():
                         val = config.get(ans.strip('_'), ans)
                         ctl.fill(val)
-                        print(f"[OVERRIDE] {q} → {val}")
+                        print(f"[OVERRIDE] {q} -> {val}")
                         time.sleep(0.2)
                         break
                 break
@@ -91,7 +91,7 @@ def fill_all_blanks(page):
                 lbl2 = dialog.query_selector(f'label[for="{rid}"]') if rid else None
                 if lbl2:
                     lbl2.click()
-                    print("[OK] Auto‑selected radio 'Yes'")
+                    print(f"[OK] {q} -> yes")
                     time.sleep(0.2)
 
             # Handle selects
@@ -101,10 +101,10 @@ def fill_all_blanks(page):
                 if curr in ("", "select an option"):
                     if "yes" in opts and "no" in opts:
                         ctl.select_option(index=opts.index("yes"))
-                        print("[OK] Auto‑selected dropdown 'Yes'")
+                        print(f"[OK] {q} -> yes")
                     elif all(opt.isdigit() for opt in opts):
                         ctl.select_option(value=EXP_DEF)
-                        print(f"[OK] Auto‑selected dropdown '{EXP_DEF}'")
+                        print(f"[OK] {q} -> {EXP_DEF}")
                     time.sleep(0.2)
 
             # Handle text inputs
@@ -113,7 +113,7 @@ def fill_all_blanks(page):
             ):
                 if not ctl.input_value().strip():
                     ctl.fill(EXP_DEF)
-                    print(f"[OK] Auto‑filled input '{EXP_DEF}'")
+                    print(f"[OK] {q} -> {EXP_DEF}")
                     time.sleep(0.2)
 
 
@@ -189,7 +189,7 @@ def apply_to_jobs(limit: int = 5):
                 if page.is_visible('input[name="file"]'):
                     page.set_input_files('input[name="file"]', config["resume_path"])
 
-                # Multi‑step form
+                # Multi-step form
                 for _ in range(5):
                     fill_all_blanks(page)
 
@@ -199,7 +199,7 @@ def apply_to_jobs(limit: int = 5):
                         db.log_application(job_title, company_name, job_url, "success")
                         success_count += 1
 
-                        # close any post‑submit modal
+                        # close any post-submit modal
                         for sel in [
                             'button.artdeco-modal__dismiss',
                             'button[data-test-modal-close-btn]',
