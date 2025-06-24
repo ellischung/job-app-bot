@@ -141,16 +141,16 @@ def apply_to_jobs(limit: int = 5):
         )
         time.sleep(5)
 
-        # Scroll window to exhaust more job apps
+        # Scroll through job listings until the end to get queued for applying
         prev_count = 0
-        for _ in range(10):
-            page.evaluate("window.scrollBy(0, document.body.scrollHeight)")
-            time.sleep(1)
-            cards_now = page.query_selector_all("a.job-card-container__link")
-            if len(cards_now) == prev_count:
+        while True:
+            cards = page.query_selector_all("a.job-card-container__link")
+            curr_count = len(cards)
+            if curr_count <= prev_count:
                 break
-            prev_count = len(cards_now)
-
+            prev_count = curr_count
+            cards[-1].evaluate("el => el.scrollIntoView()")
+            time.sleep(1)
         cards = page.query_selector_all("a.job-card-container__link")
         total = len(cards)
         print(f"{total} jobs found. {limit} attempts queued.")
