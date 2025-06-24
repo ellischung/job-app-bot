@@ -122,7 +122,7 @@ def apply_to_jobs(limit: int = 5):
     db.init_db()
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False, slow_mo=50)
+        browser = p.chromium.launch(headless=True)
         page = browser.new_context().new_page()
 
         # Login to Linkedin
